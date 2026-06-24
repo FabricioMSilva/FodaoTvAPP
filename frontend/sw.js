@@ -1,13 +1,14 @@
 const CACHE_NAME = 'fodao-player-v7';
 const APP_SHELL = [
-  '/static/index.html',
-  '/static/player.html',
-  '/static/style.css',
-  '/static/app.js',
-  '/static/player.js',
-  '/static/register-sw.js',
-  '/static/manifest.webmanifest',
-  '/static/Logo.png',
+  '/index.html',
+  '/player.html',
+  '/style.css',
+  '/app.js',
+  '/player.js',
+  '/register-sw.js',
+  '/manifest.webmanifest',
+  '/version.json',
+  '/Logo.png',
 ];
 
 self.addEventListener('install', event => {

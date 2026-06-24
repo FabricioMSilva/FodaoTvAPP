@@ -347,12 +347,16 @@
         <button class="close-modal" data-modal="admin-catalog-modal" aria-label="Fechar">&times;</button>
       </div>
       <div class="modal-body">
-        <p class="admin-catalog-copy">Escolha um arquivo M3U/M3U8. O catálogo atual será substituído para todos os usuários após a validação.</p>
+        <p class="admin-catalog-copy">Escolha um arquivo M3U/M3U8 ou cole uma ou mais URLs de playlist. O catálogo atual será substituído para todos os usuários após a validação.</p>
         <label class="admin-file-picker" for="admin-m3u-file">
           <i class="fas fa-file-import"></i>
           <span>Selecionar arquivo M3U</span>
           <input id="admin-m3u-file" type="file" accept=".m3u,.m3u8,audio/x-mpegurl,application/x-mpegurl" hidden>
         </label>
+        <div class="admin-url-row">
+          <textarea id="admin-m3u-url" placeholder="Cole uma ou mais URLs M3U/M3U8, uma por linha" autocomplete="off"></textarea>
+          <button id="admin-load-url-btn" class="btn-secondary btn-lg" type="button">Carregar URLs</button>
+        </div>
         <p id="admin-m3u-summary" class="admin-m3u-summary">Nenhum arquivo selecionado.</p>
         <button id="admin-import-btn" class="btn-primary btn-lg" type="button" disabled>ATUALIZAR CATÁLOGO</button>
       </div>

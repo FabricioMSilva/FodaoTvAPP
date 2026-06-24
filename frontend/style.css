@@ -2872,6 +2872,27 @@ body::after {
 }
 .admin-file-picker i { color: var(--primary-cyan); font-size: 1.7rem; }
 .admin-file-picker:hover { background: rgba(35, 116, 202, 0.24); }
+.admin-url-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin: 14px 0;
+}
+.admin-url-row textarea {
+  min-height: 112px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(141, 183, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  resize: vertical;
+  min-width: 0;
+  font-family: 'DM Sans', sans-serif;
+}
+.admin-url-row textarea:focus {
+  outline: none;
+  border-color: rgba(89, 214, 255, 0.85);
+}
 .admin-m3u-summary { min-height: 38px; margin: 14px 0; color: var(--text-secondary); font-size: 0.82rem; line-height: 1.45; }
 .admin-catalog-content #admin-import-btn:disabled { cursor: not-allowed; opacity: 0.5; }
 

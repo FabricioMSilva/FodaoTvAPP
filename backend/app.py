@@ -259,6 +259,22 @@ def adult_catalog_groups(username: str, password: str):
     return {'groups': sorted(groups, key=lambda group: (group['content_type'], group['name'].casefold()))}
 
 
+@app.get('/api/proxy-m3u')
+def proxy_m3u(url: str):
+    """Proxy any remote M3U/M3U8 fetch to work around browser CORS restrictions."""
+    if not url:
+        raise HTTPException(status_code=400, detail='Parâmetro url é obrigatório')
+    try:
+        response = requests.get(url, timeout=20, headers={
+            'User-Agent': 'HAVKIPTV/1.0',
+            'Accept': 'application/vnd.apple.mpegurl, application/x-mpegURL, */*',
+        })
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=502, detail=f'Falha ao buscar M3U remoto: {exc}') from exc
+    return Response(content=response.text, media_type='text/plain')
+
+
 @app.get('/api/catalog/channels')
 def catalog_channels(content_type: str, group_id: str, username: str, password: str):
     """Load one playlist.json only after the viewer selects its group."""

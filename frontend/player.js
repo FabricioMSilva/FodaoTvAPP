@@ -95,9 +95,16 @@ const adminBtn = document.getElementById('admin-btn');
 const profileAdminBtn = document.getElementById('profile-admin-btn');
 const adminCatalogModal = document.getElementById('admin-catalog-modal');
 const adminM3uFile = document.getElementById('admin-m3u-file');
+const adminM3uUrl = document.getElementById('admin-m3u-url');
+const adminLoadUrlBtn = document.getElementById('admin-load-url-btn');
 const adminM3uSummary = document.getElementById('admin-m3u-summary');
 const adminImportBtn = document.getElementById('admin-import-btn');
 let pendingAdminCatalog = null;
+const APP_VERSION = '1.0.0';
+const UPDATE_CHECK_URL = '/version.json';
+const UPDATE_CHECK_INTERVAL = 1000 * 60 * 10; // 10 minutos
+const MAX_NESTED_PLAYLIST_FETCH = 12;
+const MAX_CATALOG_ENTRIES = 20000;
 
 // ============================================
 // INITIALIZATION
@@ -139,6 +146,8 @@ async function initializePlayer() {
   enableAdminInterface();
   activateMobileShell();
   showHomeScreen();
+  await checkForAppUpdate();
+  startPeriodicUpdateCheck();
   loadPlaylist();
 }
 
@@ -1204,44 +1213,155 @@ function classifyImportedCategory(groupName, channelName) {
   return 'ao-vivo';
 }
 
-function parseM3uForImport(text) {
+function resolveUrl(url, baseUrl) {
+  try {
+    return baseUrl ? new URL(url, baseUrl).href : url;
+  } catch {
+    return url;
+  }
+}
+
+function extractM3uEntries(text) {
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  const entries = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!line.startsWith('#EXTINF')) continue;
+
+    const commaIndex = line.lastIndexOf(',');
+    const metadata = commaIndex >= 0 ? line.slice(0, commaIndex) : line;
+    const name = commaIndex >= 0 ? line.slice(commaIndex + 1).trim() : 'Sem nome';
+    const attribute = key => metadata.match(new RegExp(`${key}="([^"]*)"`, 'i'))?.[1] || '';
+    let url = '';
+
+    for (let j = i + 1; j < lines.length; j += 1) {
+      if (!lines[j] || lines[j].startsWith('#')) continue;
+      url = lines[j];
+      break;
+    }
+
+    if (!url) continue;
+
+    entries.push({
+      name: name || 'Sem nome',
+      group: attribute('group-title') || 'Outros',
+      logo: attribute('tvg-logo'),
+      tvgId: attribute('tvg-id'),
+      url,
+    });
+  }
+  return entries;
+}
+
+function isNestedPlaylistUrl(url) {
+  return /\.(m3u|m3u8)(?:\?.*)?$/i.test(url);
+}
+
+async function fetchM3uText(url) {
+  const fetchRemote = async (requestUrl) => {
+    const response = await fetch(requestUrl, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Falha ao baixar M3U: ${response.status} ${response.statusText}`);
+    }
+    return response.text();
+  };
+
+  try {
+    return await fetchRemote(url);
+  } catch (firstError) {
+    console.warn('Falha ao buscar diretamente. Tentando proxy backend:', firstError);
+    const proxyUrl = `/api/proxy-m3u?url=${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Falha ao baixar via proxy: ${response.status} ${response.statusText}`);
+    }
+    return response.text();
+  }
+}
+
+async function parseM3uTextRecursive(text, baseUrl = '') {
+  const entries = [];
+  const queue = [{ text, baseUrl }];
+  const visited = new Set();
+
+  while (queue.length && entries.length < MAX_CATALOG_ENTRIES) {
+    const { text: currentText, baseUrl: currentBase } = queue.shift();
+    const parsed = extractM3uEntries(currentText);
+
+    for (const entry of parsed) {
+      const resolvedUrl = resolveUrl(entry.url, currentBase || window.location.href);
+      if (isNestedPlaylistUrl(resolvedUrl) && !visited.has(resolvedUrl) && visited.size < MAX_NESTED_PLAYLIST_FETCH) {
+        visited.add(resolvedUrl);
+        try {
+          const nestedText = await fetchM3uText(resolvedUrl);
+          queue.push({ text: nestedText, baseUrl: resolvedUrl });
+        } catch (error) {
+          console.warn('Não foi possível carregar lista aninhada:', resolvedUrl, error);
+        }
+        continue;
+      }
+      entries.push({ ...entry, url: resolvedUrl });
+    }
+  }
+
+  return entries;
+}
+
+async function parseM3uForImport(text, baseUrl = '') {
+  const parsedEntries = await parseM3uTextRecursive(text, baseUrl);
   const groups = new Map();
   const streams = new Map();
-  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
-  let pending = null;
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    if (line.startsWith('#EXTINF')) {
-      const commaIndex = line.lastIndexOf(',');
-      const metadata = commaIndex >= 0 ? line.slice(0, commaIndex) : line;
-      const name = (commaIndex >= 0 ? line.slice(commaIndex + 1) : '').trim() || 'Sem nome';
-      const attribute = key => metadata.match(new RegExp(`${key}="([^"]*)"`, 'i'))?.[1] || '';
-      pending = {
-        name,
-        group: attribute('group-title') || 'Outros',
-        logo: attribute('tvg-logo'),
-        tvgId: attribute('tvg-id'),
-      };
-      continue;
+
+  for (const entry of parsedEntries) {
+    if (!entry.url) continue;
+    const categorySlug = classifyImportedCategory(entry.group, entry.name);
+    const groupName = entry.group.trim() || 'Outros';
+    const groupKey = `${categorySlug}\u0000${groupName}`;
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, { category_slug: categorySlug, name: groupName, sort_order: groups.size });
     }
-    if (line.startsWith('#') || !pending) continue;
-    const categorySlug = classifyImportedCategory(pending.group, pending.name);
-    const groupName = pending.group.trim() || 'Outros';
-    const key = `${categorySlug}\u0000${groupName}`;
-    groups.set(key, { category_slug: categorySlug, name: groupName, sort_order: groups.size });
-    streams.set(`${key}\u0000${pending.name}`, {
-      category_slug: categorySlug,
-      group_name: groupName,
-      name: pending.name,
-      stream_url: line,
-      logo_url: pending.logo,
-      stream_type: categorySlug,
-      metadata: { tvg_id: pending.tvgId, source_group: groupName },
-    });
-    pending = null;
+    const streamKey = `${groupKey}\u0000${entry.name}`;
+    if (!streams.has(streamKey)) {
+      streams.set(streamKey, {
+        category_slug: categorySlug,
+        group_name: groupName,
+        name: entry.name,
+        stream_url: entry.url,
+        logo_url: entry.logo,
+        stream_type: categorySlug,
+        metadata: { tvg_id: entry.tvgId || null, source_group: groupName },
+      });
+    }
   }
+
   return { groups: [...groups.values()], streams: [...streams.values()] };
+}
+
+async function checkForAppUpdate() {
+  try {
+    const response = await fetch(`${UPDATE_CHECK_URL}?_=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) return;
+    const remote = await response.json();
+    if (remote?.version && remote.version !== APP_VERSION) {
+      showMessage('Nova versão do app disponível. Atualizando...', 'info');
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) await reg.update();
+      }
+      setTimeout(() => window.location.reload(), 1200);
+    }
+  } catch (error) {
+    console.warn('Falha ao verificar atualização do app:', error);
+  }
+}
+
+function startPeriodicUpdateCheck() {
+  setInterval(checkForAppUpdate, UPDATE_CHECK_INTERVAL);
+  window.addEventListener('focus', () => {
+    if (document.visibilityState === 'visible') {
+      checkForAppUpdate();
+    }
+  });
 }
 
 function openAdminCatalogModal() {
@@ -1264,6 +1384,7 @@ async function importAdminCatalog() {
     await loadPlaylist();
     adminM3uSummary.textContent = `Catálogo atualizado: ${data.streams} links em ${data.groups} grupos.`;
     showMessage('Catálogo atualizado para todos os usuários.', 'success');
+    closeModal('admin-catalog-modal');
   } catch (error) {
     showMessage(`Não foi possível atualizar o catálogo: ${error.message}`, 'error');
   } finally {
@@ -1377,12 +1498,13 @@ function setupEventListeners() {
     const file = adminM3uFile.files?.[0];
     pendingAdminCatalog = null;
     adminImportBtn.disabled = true;
+    adminM3uSummary.textContent = 'Lendo arquivo...';
     if (!file) {
       adminM3uSummary.textContent = 'Nenhum arquivo selecionado.';
       return;
     }
     try {
-      const catalog = parseM3uForImport(await file.text());
+      const catalog = await parseM3uForImport(await file.text());
       if (!catalog.streams.length) throw new Error('Nenhum link M3U válido foi encontrado.');
       pendingAdminCatalog = catalog;
       adminM3uSummary.textContent = `${file.name}: ${catalog.streams.length} links em ${catalog.groups.length} grupos. O catálogo atual será substituído.`;
@@ -1391,6 +1513,71 @@ function setupEventListeners() {
       adminM3uSummary.textContent = `Arquivo inválido: ${error.message}`;
     }
   });
+
+  function parseMultipleUrls(rawValue) {
+    return rawValue
+      .split(/\r?\n|[;,]/)
+      .map(url => url.trim())
+      .filter(url => url.length > 0);
+  }
+
+  function mergeImportedCatalogs(catalogs) {
+    const groups = new Map();
+    const streams = new Map();
+
+    catalogs.forEach(catalog => {
+      catalog.groups.forEach(group => {
+        const key = `${group.category_slug}\u0000${group.name}`;
+        if (!groups.has(key)) groups.set(key, group);
+      });
+      catalog.streams.forEach(stream => {
+        const key = `${stream.category_slug}\u0000${stream.group_name}\u0000${stream.name}\u0000${stream.stream_url}`;
+        if (!streams.has(key)) streams.set(key, stream);
+      });
+    });
+
+    return {
+      groups: [...groups.values()],
+      streams: [...streams.values()],
+    };
+  }
+
+  if (adminLoadUrlBtn) adminLoadUrlBtn.addEventListener('click', async () => {
+    const urls = parseMultipleUrls(adminM3uUrl?.value || '');
+    if (!urls.length) {
+      adminM3uSummary.textContent = 'Informe ao menos uma URL de M3U/M3U8.';
+      return;
+    }
+
+    pendingAdminCatalog = null;
+    adminImportBtn.disabled = true;
+    adminM3uSummary.textContent = 'Carregando URLs...';
+
+    const results = await Promise.allSettled(urls.map(async url => {
+      const text = await fetchM3uText(url);
+      return parseM3uForImport(text, url);
+    }));
+
+    const successes = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+    const failures = results
+      .filter(r => r.status === 'rejected')
+      .map(r => r.reason?.message || 'Erro desconhecido');
+
+    if (!successes.length) {
+      adminM3uSummary.textContent = `Falha ao carregar todas as URLs: ${failures.join('; ')}`;
+      adminImportBtn.disabled = true;
+      return;
+    }
+
+    const catalog = mergeImportedCatalogs(successes);
+    pendingAdminCatalog = catalog;
+    adminImportBtn.disabled = false;
+    adminM3uSummary.textContent = `${successes.length} de ${urls.length} URLs carregadas. ${catalog.streams.length} links em ${catalog.groups.length} grupos. O catálogo atual será substituído.`;
+    if (failures.length) {
+      showMessage(`Algumas URLs falharam: ${failures.join('; ')}`, 'warning');
+    }
+  });
+
   if (adminImportBtn) adminImportBtn.addEventListener('click', importAdminCatalog);
   document.querySelectorAll('.logout').forEach(button => {
     button.addEventListener('click', async event => {
