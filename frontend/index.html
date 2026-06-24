@@ -42,14 +42,14 @@
       <!-- Login Form -->
       <form id="login-form" class="login-form">
         <div class="form-group">
-          <label for="username">Usuário</label>
+          <label for="username">E-mail</label>
           <input 
-            type="text" 
+            type="email" 
             id="username" 
             name="username" 
-            placeholder="Digite seu usuário"
+            placeholder="Digite seu e-mail"
             required 
-            autocomplete="username"
+            autocomplete="email"
           >
         </div>
 
@@ -62,18 +62,6 @@
             placeholder="Digite sua senha"
             required 
             autocomplete="current-password"
-          >
-        </div>
-
-        <div class="form-group">
-          <label for="server-url">Servidor IPTV</label>
-          <input
-            type="url"
-            id="server-url"
-            name="server-url"
-            placeholder="http://192.168.0.10:8000"
-            autocomplete="url"
-            required
           >
         </div>
 
@@ -104,6 +92,9 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="supabase-client.js"></script>
   <script src="register-sw.js"></script>
   <script src="app.js"></script>
 </body>

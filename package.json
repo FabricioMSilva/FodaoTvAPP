@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "scripts": {
     "android:add": "npx cap add android",
-    "android:sync": "npx cap sync android",
+    "supabase:config": "python tools/generate_supabase_config.py",
+    "android:sync": "npm run supabase:config && npx cap sync android",
     "android:open": "npx cap open android"
   },
   "dependencies": {

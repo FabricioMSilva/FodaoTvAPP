@@ -263,9 +263,8 @@
       </div>
       <div class="modal-body">
         <div class="setting-item">
-          <label for="server-url">Servidor IPTV</label>
-          <input id="server-url" type="url" inputmode="url" placeholder="http://192.168.0.10:8000">
-          <small>Use o IP do computador/VPS ao instalar o app no celular ou TV.</small>
+          <label>Catálogo</label>
+          <small>O catálogo é sincronizado automaticamente e gerenciado pelo administrador.</small>
         </div>
         <div class="setting-item">
           <label>Idioma</label>
@@ -387,6 +386,9 @@
   <div id="message-container" class="message-container"></div>
 
   <script src="register-sw.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="supabase-client.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script src="player.js"></script>
 </body>

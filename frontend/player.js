@@ -3,7 +3,7 @@
 // ============================================
 
 // DOM Elements
-const API_BASE = (localStorage.getItem('havk-api-base') || window.location.origin).replace(/\/$/, '');
+const supabase = window.havkSupabase;
 const videoPlayer = document.getElementById('video-player');
 const videoContainer = document.querySelector('.video-container');
 const availableGallery = document.getElementById('available-gallery');
@@ -42,7 +42,7 @@ let currentChannelPool = [];
 let allChannels = [];
 let channelsByCategory = {};
 let currentUsername = '';
-let currentPassword = '';
+let currentUser = null;
 let currentCategory = '';
 let currentGroupPath = [];
 let groupTrees = {};
@@ -53,6 +53,7 @@ let displayedChannelsCount = 0;
 const channelBatchSize = 50;
 let favorites = [];
 let catalogGroups = {};
+let categoryRecords = {};
 let selectedGroupId = '';
 let playbackRequest = 0;
 let catalogVisibleCount = 60;
@@ -74,7 +75,6 @@ const adultAccessForm = document.getElementById('adult-access-form');
 const adultAccessPin = document.getElementById('adult-access-pin');
 const adultAccessCopy = document.getElementById('adult-access-copy');
 const adultAccessError = document.getElementById('adult-access-error');
-const serverUrlInput = document.getElementById('server-url');
 const mobileChannelsBtn = document.getElementById('mobile-channels-btn');
 const mobileChannelModal = document.getElementById('mobile-channel-modal');
 const mobileChannelClose = document.getElementById('mobile-channel-close');
@@ -99,19 +99,21 @@ document.addEventListener('DOMContentLoaded', () => {
   initializePlayer();
 });
 
-function initializePlayer() {
-  const username = sessionStorage.getItem('fodao-auth-username');
-  const password = atob(sessionStorage.getItem('fodao-auth-password') || '');
-
-  if (!username || !password) {
+async function initializePlayer() {
+  if (!supabase) {
+    window.location.href = 'index.html';
+    return;
+  }
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) {
     window.location.href = 'index.html';
     return;
   }
 
-  currentUsername = username;
-  currentPassword = password;
-  displayUsername.textContent = username.toUpperCase();
-  if (profileUsername) profileUsername.textContent = username.toUpperCase();
+  currentUser = session.user;
+  currentUsername = session.user.email || 'Usuário';
+  displayUsername.textContent = currentUsername.toUpperCase();
+  if (profileUsername) profileUsername.textContent = currentUsername.toUpperCase();
 
   favorites = JSON.parse(localStorage.getItem('fodao-favorites') || '[]');
   setupEventListeners();
@@ -151,18 +153,13 @@ function showPlayerScreen() {
 async function loadPlaylist() {
   try {
     showMessage('Carregando catálogo...', 'info');
-
-    const apiUrl = new URL('/api/catalog', API_BASE);
-    apiUrl.searchParams.set('username', currentUsername);
-    apiUrl.searchParams.set('password', currentPassword);
-    const response = await fetch(apiUrl.toString());
-
-    if (!response.ok) {
-      throw new Error(`Falha ao carregar streams: ${response.statusText}`);
-    }
-
-    const json = await response.json();
-    if (!json.categories?.length) throw new Error('Nenhuma categoria retornada pela API');
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, slug, name, sort_order')
+      .order('sort_order');
+    if (error) throw error;
+    if (!data?.length) throw new Error('Nenhuma categoria retornada pelo Supabase');
+    categoryRecords = Object.fromEntries(data.map(category => [category.slug, category]));
 
     playlistLoaded = true;
     updateHeroInfo();
@@ -180,13 +177,21 @@ async function loadGroups(category) {
   }
   try {
     if (!catalogGroups[category]) {
-      const apiUrl = new URL(category === 'adultos' ? '/api/catalog/adult/groups' : '/api/catalog/groups', API_BASE);
-      apiUrl.searchParams.set('username', currentUsername);
-      apiUrl.searchParams.set('password', currentPassword);
-      if (category !== 'adultos') apiUrl.searchParams.set('content_type', category);
-      const response = await fetch(apiUrl.toString());
-      if (!response.ok) throw new Error(response.statusText);
-      catalogGroups[category] = (await response.json()).groups || [];
+      const categoryRecord = categoryRecords[category];
+      if (!categoryRecord) throw new Error('Categoria não encontrada');
+      const { data, error } = await supabase
+        .from('content_groups')
+        .select('id, name, sort_order, streams(count)')
+        .eq('category_id', categoryRecord.id)
+        .order('sort_order')
+        .order('name');
+      if (error) throw error;
+      catalogGroups[category] = (data || []).map(group => ({
+        id: group.id,
+        name: group.name,
+        count: group.streams?.[0]?.count || 0,
+        content_type: category,
+      }));
     }
     renderCatalogGroups(catalogGroups[category]);
   } catch (error) {
@@ -225,20 +230,28 @@ async function loadGroup(groupId, requestedContentType = currentCategory) {
   if (!currentCategory || currentCategory === 'favoritos') return;
   try {
     showMessage('Carregando grupo selecionado...', 'info');
-    const apiUrl = new URL('/api/catalog/channels', API_BASE);
-    apiUrl.searchParams.set('username', currentUsername);
-    apiUrl.searchParams.set('password', currentPassword);
     const contentType = requestedContentType || currentCategory;
-    apiUrl.searchParams.set('content_type', contentType);
-    apiUrl.searchParams.set('group_id', groupId);
-    const response = await fetch(apiUrl.toString());
-    if (!response.ok) throw new Error(response.statusText);
-    const payload = await response.json();
+    const { data, error } = await supabase
+      .from('streams')
+      .select('id, name, stream_url, logo_url, stream_type, content_groups(name)')
+      .eq('group_id', groupId)
+      .eq('is_active', true)
+      .order('name');
+    if (error) throw error;
     selectedGroupId = groupId;
-    allChannels = (payload.streams || []).map(channel => {
-      const group = channel.group || 'Outros';
+    allChannels = (data || []).map(channel => {
+      const group = channel.content_groups?.name || 'Outros';
       const groupPath = parseGroupPath(group);
-      return {...channel, group, groupPath, groupPathString: groupPath.join(' / ') || 'Outros'};
+      return {
+        id: channel.id,
+        name: channel.name,
+        url: channel.stream_url,
+        logo: channel.logo_url || '',
+        type: channel.stream_type || contentType,
+        group,
+        groupPath,
+        groupPathString: groupPath.join(' / ') || 'Outros',
+      };
     });
     classifyChannels();
     setChannelPool(allChannels);
@@ -523,36 +536,7 @@ function renderVisualCatalogCards() {
 }
 
 async function loadPlaylistFromM3U() {
-  try {
-    showMessage('Carregando playlist M3U...', 'info');
-    const playlistUrl = new URL('/api/playlist_source', API_BASE);
-    playlistUrl.searchParams.set('username', currentUsername);
-    playlistUrl.searchParams.set('password', currentPassword);
-    playlistUrl.searchParams.set('source', 'output_extracao');
-    const response = await fetch(playlistUrl.toString(), {
-      method: 'GET',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Falha ao carregar playlist: ${response.statusText}`);
-    }
-
-    const text = await response.text();
-    allChannels = parseM3UPlaylist(text);
-
-    if (!allChannels.length) {
-      throw new Error('Nenhum canal encontrado na playlist.');
-    }
-
-    playlistLoaded = true;
-    classifyChannels();
-    populateContentRows();
-    updateHeroInfo();
-    showHeroScreen();
-    showMessage(`${allChannels.length} canais carregados com sucesso!`, 'success');
-  } catch (error) {
-    showMessage(`Erro ao carregar playlist: ${error.message}`, 'error');
-  }
+  showMessage('O catálogo agora é carregado diretamente do Supabase.', 'info');
 }
 
 // ============================================
@@ -995,15 +979,7 @@ function updateFavoriteButton() {
 // ============================================
 
 function getProxyUrl(url) {
-  try {
-    const parsed = new URL(url, API_BASE);
-    if (parsed.origin !== API_BASE) {
-      return `${API_BASE}/proxy?url=${encodeURIComponent(parsed.href)}`;
-    }
-  } catch (error) {
-    return url;
-  }
-  return new URL(url, API_BASE).href;
+  return url;
 }
 
 async function playStream(url) {
@@ -1286,6 +1262,13 @@ function setupEventListeners() {
   if (mobileChannelModal) mobileChannelModal.addEventListener('click', event => {
     if (event.target === mobileChannelModal) closeMobileChannelModal();
   });
+  document.querySelectorAll('.logout').forEach(button => {
+    button.addEventListener('click', async event => {
+      event.preventDefault();
+      await supabase?.auth.signOut();
+      window.location.replace('index.html');
+    });
+  });
 
   document.querySelectorAll('.mobile-bottom-nav [data-category]').forEach(item => {
     item.classList.toggle('active', item.dataset.category === category);
@@ -1480,20 +1463,6 @@ function setupEventListeners() {
     themeSelect.addEventListener('change', (e) => {
       localStorage.setItem('fodao-theme', e.target.value);
       showMessage('Tema atualizado', 'success');
-    });
-  }
-
-  if (serverUrlInput) {
-    serverUrlInput.value = API_BASE;
-    serverUrlInput.addEventListener('change', () => {
-      try {
-        const serverUrl = new URL(serverUrlInput.value.trim()).origin;
-        localStorage.setItem('havk-api-base', serverUrl);
-        showMessage('Servidor salvo. O player será recarregado.', 'success');
-        setTimeout(() => window.location.reload(), 600);
-      } catch {
-        showMessage('Informe uma URL válida, como http://192.168.0.10:8000.', 'error');
-      }
     });
   }
 
