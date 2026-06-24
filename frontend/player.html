@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#030816">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="Logo.png">
+  <title>Fodão Player</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="player-page">
+  <div class="player-wrapper">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-mini">
+          <img class="sidebar-logo" src="logo.png" alt="Fodão Player">
+        </div>
+        <button class="toggle-sidebar" id="toggle-sidebar">
+          <i class="fas fa-bars"></i>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-category="ao-vivo">
+          <i class="fas fa-broadcast-tower"></i>
+          <span>TV AO VIVO</span>
+        </a>
+        <a href="#" class="nav-item" data-category="filmes">
+          <i class="fas fa-film"></i>
+          <span>FILMES</span>
+        </a>
+        <a href="#" class="nav-item" data-category="series">
+          <i class="fas fa-tv"></i>
+          <span>SÉRIES</span>
+        </a>
+        <a href="#" class="nav-item" data-category="esportes">
+          <i class="fas fa-trophy"></i>
+          <span>ESPORTES</span>
+        </a>
+        <a href="#" class="nav-item" data-category="favoritos">
+          <i class="fas fa-heart"></i>
+          <span>FAVORITOS</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="#" class="nav-item" id="settings-btn">
+          <i class="fas fa-cog"></i>
+          <span>CONFIGURAÇÕES</span>
+        </a>
+        <a href="#" class="nav-item" id="profile-btn">
+          <i class="fas fa-user-circle"></i>
+          <span>PERFIL</span>
+        </a>
+        <a href="index.html" class="nav-item logout">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>SAIR</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-main">
+          <div class="header-left">
+            <img class="header-logo" src="logo.png" alt="Fodão Player">
+            <div>
+              <h1 id="section-title">TV AO VIVO</h1>
+              <p class="header-subtitle">Navegue por categorias, favoritos e conteúdos recomendados.</p>
+            </div>
+          </div>
+          <div class="header-right">
+            <button class="toggle-menu" id="toggle-menu" aria-label="Abrir menu de categorias">
+              <i class="fas fa-bars"></i>
+            </button>
+            <div class="search-box">
+              <input 
+                type="text" 
+                id="search-input" 
+                placeholder="Buscar canal ou grupo..."
+                class="search-input"
+              >
+              <i class="fas fa-search"></i>
+            </div>
+            <div class="user-info">
+              <div class="user-avatar">
+                <i class="fas fa-user"></i>
+              </div>
+              <div class="user-details">
+                <p class="username" id="display-username">Usuário</p>
+                <p class="status">Ativo</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <nav class="top-nav" id="top-nav">
+          <button type="button" class="mobile-channels-btn" id="mobile-channels-btn"><i class="fas fa-list"></i> CANAIS</button>
+          <button class="category-card top-nav-item active" data-category="ao-vivo">TV AO VIVO</button>
+          <button class="category-card top-nav-item" data-category="filmes">FILMES</button>
+          <button class="category-card top-nav-item" data-category="series">SÉRIES</button>
+          <button class="category-card top-nav-item" data-category="esportes">ESPORTES</button>
+          <button class="category-card top-nav-item" data-category="favoritos">FAVORITOS</button>
+          <button class="category-card top-nav-item adult-nav" data-category="adultos"><i class="fas fa-lock"></i> ADULTOS +18</button>
+        </nav>
+      </header>
+
+      <!-- Home Screen -->
+      <section class="home-screen" id="home-screen" aria-hidden="true"></section>
+
+      <!-- Hero Banner -->
+      <section class="hero-banner" id="hero-banner" style="display: none;">
+        <div class="hero-info">
+          <h2>Assista agora</h2>
+          <p>Escolha um canal, série ou filme e assista diretamente no player.</p>
+          <div class="hero-stats">
+            <div class="hero-card">
+              <strong id="hero-current-channel">Nenhum canal selecionado</strong>
+              <span>Agora ao vivo</span>
+            </div>
+            <div class="hero-card">
+              <strong id="hero-total-channels">0</strong>
+              <span>Canais carregados</span>
+            </div>
+            <div class="hero-card">
+              <strong id="hero-favorite-count">0</strong>
+              <span>Favoritos</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn-primary btn-lg" id="hero-watch-btn">Ir para player</button>
+        </div>
+      </section>
+
+      <!-- Player Section -->
+      <section class="player-section" id="player-section" style="display: none;">
+        <aside class="library-sidebar" aria-label="Biblioteca de grupos">
+          <div id="group-tree" class="group-tree"></div>
+        </aside>
+
+        <div class="video-container">
+          <div id="available-gallery" class="available-gallery" aria-label="Canais disponíveis"></div>
+          <video id="video-player" controls playsinline></video>
+          <div class="video-hud" aria-live="polite">
+            <span class="live-indicator"><i></i> AO VIVO</span>
+            <div>
+              <span class="video-hud-label">REPRODUZINDO AGORA</span>
+              <strong id="player-now-title">Escolha um canal para começar</strong>
+            </div>
+          </div>
+          <div class="player-controls-custom">
+            <button class="control-btn" id="fullscreen-btn" title="Tela cheia">
+              <i class="fas fa-expand"></i>
+            </button>
+            <button class="control-btn" id="favorites-btn" title="Adicionar aos favoritos">
+              <i class="fas fa-heart"></i>
+            </button>
+            <button class="control-btn mobile-minimize-btn" id="mobile-minimize-btn" title="Minimizar player">
+              <i class="fas fa-compress-alt"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Channel/Content List -->
+        <div class="channel-sidebar">
+          <div class="channel-header">
+            <div>
+              <span class="eyebrow">SUA BIBLIOTECA</span>
+              <h3>Disponíveis</h3>
+            </div>
+            <span class="channel-count" id="channel-count">0</span>
+          </div>
+          <div id="channel-list" class="channel-list"></div>
+          <div class="load-more-holder">
+            <button id="load-more-btn" class="load-more-btn" style="display:none;">Mostrar mais</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Content Grid Section -->
+      <section class="content-section" id="content-grid" style="display: none;">
+        <div class="section-header">
+          <h2 id="grid-section-title">Conteúdo</h2>
+        </div>
+        <div class="content-grid" id="main-grid"></div>
+      </section>
+
+      <!-- Sections -->
+      <section class="categories-section" id="categories-section">
+        <div id="continua-assistindo" class="content-row">
+          <h2>CONTINUA ASSISTINDO</h2>
+          <div class="content-grid" id="continua-grid"></div>
+        </div>
+
+        <div id="lancamentos" class="content-row">
+          <h2>LANÇAMENTOS (NOVO)</h2>
+          <div class="content-grid" id="lancamentos-grid"></div>
+        </div>
+
+        <div id="mais-vistos" class="content-row">
+          <h2>MAIS VISTOS</h2>
+          <div class="content-grid" id="mais-vistos-grid"></div>
+        </div>
+
+        <div id="minha-lista" class="content-row">
+          <h2>MINHA LISTA</h2>
+          <div class="content-grid" id="minha-lista-grid"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Dedicated phone interface. It is populated by player.js and never shown on desktop. -->
+  <div id="mobile-app-shell" class="mobile-app-shell" hidden>
+    <header class="mobile-home-header">
+      <img src="logo.png" alt="Fodão Player" class="mobile-home-logo">
+      <button type="button" id="mobile-home-profile" class="mobile-home-profile" aria-label="Abrir perfil"><i class="fas fa-user"></i></button>
+      <div class="mobile-home-search">
+        <i class="fas fa-search"></i>
+        <input id="mobile-home-search-input" type="search" placeholder="Buscar canais e conteúdos" autocomplete="off">
+      </div>
+    </header>
+
+    <nav class="mobile-home-tabs" aria-label="Categorias">
+      <button type="button" class="category-card active" data-category="ao-vivo">TV AO VIVO</button>
+      <button type="button" class="category-card" data-category="filmes">FILMES</button>
+      <button type="button" class="category-card" data-category="series">SÉRIES</button>
+      <button type="button" id="mobile-home-more">MAIS</button>
+    </nav>
+
+    <main class="mobile-home-content">
+      <section id="mobile-home-hero" class="mobile-home-hero" aria-label="Player"></section>
+      <section class="mobile-home-groups-section">
+        <div class="mobile-home-section-heading"><h2>Grupos em destaque</h2><button type="button" id="mobile-home-all-groups">Ver todos</button></div>
+        <div id="mobile-home-groups" class="mobile-home-groups"></div>
+      </section>
+      <section class="mobile-home-cards-section">
+        <div class="mobile-home-section-heading"><h2 id="mobile-home-cards-title">Canais para você</h2><button type="button" id="mobile-home-all-channels">Ver todos</button></div>
+        <div id="mobile-home-cards" class="mobile-home-cards"></div>
+      </section>
+    </main>
+  </div>
+
+  <nav class="mobile-bottom-nav" aria-label="Navegação principal">
+    <button type="button" class="category-card" data-category="ao-vivo"><i class="fas fa-broadcast-tower"></i><span>Ao vivo</span></button>
+    <button type="button" class="category-card" data-category="filmes"><i class="fas fa-film"></i><span>Filmes</span></button>
+    <button type="button" class="category-card" data-category="series"><i class="fas fa-tv"></i><span>Séries</span></button>
+    <button type="button" class="category-card" data-category="esportes"><i class="fas fa-trophy"></i><span>Esportes</span></button>
+    <button type="button" class="category-card" data-category="favoritos"><i class="fas fa-heart"></i><span>Favoritos</span></button>
+  </nav>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Configurações</h2>
+        <button class="close-modal" data-modal="settings-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-item">
+          <label for="server-url">Servidor IPTV</label>
+          <input id="server-url" type="url" inputmode="url" placeholder="http://192.168.0.10:8000">
+          <small>Use o IP do computador/VPS ao instalar o app no celular ou TV.</small>
+        </div>
+        <div class="setting-item">
+          <label>Idioma</label>
+          <select id="language-select">
+            <option value="pt">Português</option>
+            <option value="en">English</option>
+            <option value="es">Español</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <label>Tema</label>
+          <select id="theme-select">
+            <option value="dark">Escuro</option>
+            <option value="light">Claro</option>
+            <option value="auto">Automático</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <label class="checkbox-label">
+            <input type="checkbox" id="parental-control" checked>
+            <span>Controle Parental</span>
+          </label>
+        </div>
+        <div class="setting-item">
+          <label>Dispositivos Conectados</label>
+          <div id="devices-list" class="devices-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Modal -->
+  <div id="profile-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Seu Perfil</h2>
+        <button class="close-modal" data-modal="profile-modal">&times;</button>
+      </div>
+      <div class="modal-body profile-modal-body">
+        <div class="profile-avatar-large">
+          <i class="fas fa-user-circle"></i>
+        </div>
+        <div class="profile-info">
+          <h3 id="profile-username">USUÁRIO</h3>
+          <p class="profile-status">
+            <span class="status-badge">Ativo</span>
+          </p>
+          <div class="profile-details">
+            <div class="detail-row">
+              <span class="detail-label">Data de Validade:</span>
+              <span class="detail-value" id="profile-expiry">12/12/2024</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Conexões Ativas:</span>
+              <span class="detail-value" id="profile-connections">1</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Data de Criação:</span>
+              <span class="detail-value" id="profile-created">22/06/2026</span>
+            </div>
+          </div>
+          <button class="btn-primary btn-renew">RENOVAR PLANO</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visual catalog for movie and series folders -->
+  <div id="catalog-modal" class="modal catalog-modal" aria-hidden="true">
+    <div class="modal-content catalog-modal-content" role="dialog" aria-modal="true" aria-labelledby="catalog-modal-title">
+      <div class="modal-header catalog-modal-header">
+        <div>
+          <span class="eyebrow">CATÁLOGO</span>
+          <h2 id="catalog-modal-title">Disponíveis</h2>
+          <p id="catalog-modal-subtitle">Escolha um título para assistir</p>
+        </div>
+        <button class="close-modal" data-modal="catalog-modal" aria-label="Fechar catálogo">&times;</button>
+      </div>
+      <div id="catalog-cards" class="catalog-cards"></div>
+      <div class="catalog-footer">
+        <button id="catalog-more-btn" class="load-more-btn" style="display:none;">Mostrar mais títulos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full-screen channel selector used on phones. -->
+  <div id="mobile-channel-modal" class="mobile-channel-modal" aria-hidden="true">
+    <section class="mobile-channel-sheet" role="dialog" aria-modal="true" aria-labelledby="mobile-channel-title">
+      <header class="mobile-channel-header">
+        <div>
+          <span class="eyebrow">BIBLIOTECA</span>
+          <h2 id="mobile-channel-title">Escolha um grupo</h2>
+          <p id="mobile-channel-subtitle">TV ao vivo</p>
+        </div>
+        <button type="button" id="mobile-channel-close" class="mobile-channel-close" aria-label="Fechar seleção de canais">&times;</button>
+      </header>
+      <button type="button" id="mobile-channel-back" class="mobile-channel-back" hidden><i class="fas fa-arrow-left"></i> Grupos</button>
+      <div id="mobile-channel-groups" class="mobile-channel-groups"></div>
+      <div id="mobile-channel-list" class="mobile-channel-list" hidden></div>
+    </section>
+  </div>
+
+  <div id="adult-access-modal" class="modal adult-access-modal" aria-hidden="true">
+    <form id="adult-access-form" class="modal-content adult-access-content" aria-labelledby="adult-access-title">
+      <div class="adult-lock-icon"><i class="fas fa-lock"></i></div>
+      <span class="eyebrow">CONTROLE PARENTAL</span>
+      <h2 id="adult-access-title">Área restrita</h2>
+      <p id="adult-access-copy">Digite o PIN de acesso para abrir conteúdo adulto.</p>
+      <input id="adult-access-pin" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" autocomplete="off" placeholder="PIN de 4 a 8 números" required>
+      <p id="adult-access-error" class="adult-access-error" role="alert"></p>
+      <div class="adult-access-actions">
+        <button type="button" class="adult-cancel" data-modal="adult-access-modal">Cancelar</button>
+        <button type="submit" class="adult-confirm">Continuar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Message Container -->
+  <div id="message-container" class="message-container"></div>
+
+  <script src="register-sw.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="player.js"></script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#030816">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="Logo.png">
+  <title>Fodão Player - Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-page">
+  <div class="login-container">
+    <div class="login-box">
+      <!-- Logo -->
+      <div class="logo-container">
+        <svg class="logo-svg" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg">
+          <!-- Play button base -->
+          <circle cx="60" cy="60" r="45" fill="#1a1a1a" stroke="#ff4500" stroke-width="2"/>
+          <polygon points="45,40 45,80 85,60" fill="#ff4500"/>
+          
+          <!-- Fire effect -->
+          <g class="fire-animation">
+            <!-- Flame 1 -->
+            <path d="M 60 100 Q 50 85 55 70 Q 60 55 60 45" stroke="#ff6600" stroke-width="8" fill="none" opacity="0.9"/>
+            <!-- Flame 2 -->
+            <path d="M 60 100 Q 70 85 65 70 Q 60 55 60 45" stroke="#ffaa00" stroke-width="6" fill="none" opacity="0.8"/>
+            <!-- Flame 3 -->
+            <path d="M 60 105 Q 45 90 50 70 Q 55 50 60 40" stroke="#ff3300" stroke-width="7" fill="none" opacity="0.85"/>
+          </g>
+          
+          <!-- Text -->
+          <text x="140" y="75" font-size="48" font-weight="bold" fill="#ffffff" font-family="Arial, sans-serif">
+            <tspan>Fodão</tspan>
+          </text>
+          <text x="140" y="95" font-size="36" font-weight="bold" fill="#ffaa00" font-family="Arial, sans-serif">
+            <tspan>Player</tspan>
+          </text>
+        </svg>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="login-form">
+        <div class="form-group">
+          <label for="username">Usuário</label>
+          <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            placeholder="Digite seu usuário"
+            required 
+            autocomplete="username"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            placeholder="Digite sua senha"
+            required 
+            autocomplete="current-password"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="server-url">Servidor IPTV</label>
+          <input
+            type="url"
+            id="server-url"
+            name="server-url"
+            placeholder="http://192.168.0.10:8000"
+            autocomplete="url"
+            required
+          >
+        </div>
+
+        <div class="form-options">
+          <label class="checkbox-label">
+            <input type="checkbox" name="remember" id="remember">
+            <span>Lembrar-me</span>
+          </label>
+        </div>
+
+        <button type="submit" class="btn-primary btn-lg">ENTRAR</button>
+
+        <div id="login-message" class="message"></div>
+      </form>
+
+      <!-- Footer Links -->
+      <div class="login-footer">
+        <a href="#" class="footer-link">Suporte</a>
+        <a href="#" class="footer-link">Termos de Uso</a>
+      </div>
+    </div>
+
+    <!-- Background decorative elements -->
+    <div class="background-decoration">
+      <div class="glow-orb glow-1"></div>
+      <div class="glow-orb glow-2"></div>
+      <div class="glow-orb glow-3"></div>
+    </div>
+  </div>
+
+  <script src="register-sw.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

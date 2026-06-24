@@ -1,0 +1,39 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+android/local.properties
+
+# Python
+.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Node and Capacitor
+node_modules/
+tools/jdk-21/
+
+# Android / IDE outputs
+android/.gradle/
+android/.idea/
+android/build/
+android/app/build/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/capacitor-cordova-android-plugins/
+*.apk
+*.aab
+
+# Runtime data, user credentials and private playlists
+users_output/
+output_extracao/
+player/playlists/*
+!player/playlists/.gitkeep
+*.m3u
+*.m3u8
+m3u_preview.txt
+output_extracao_tree.txt
+
+# Duplicate local design export
+frontend/Copilot_*.png

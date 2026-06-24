@@ -1,0 +1,19 @@
+{
+  "name": "Fodão Player",
+  "short_name": "Fodão Player",
+  "description": "Player IPTV para TV ao vivo, filmes e séries.",
+  "start_url": "/static/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#030816",
+  "theme_color": "#030816",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "Logo.png",
+      "sizes": "1536x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

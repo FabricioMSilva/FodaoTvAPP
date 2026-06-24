@@ -1,0 +1,12 @@
+{
+  "appId": "com.havkiptv.player",
+  "appName": "Fodão Player",
+  "webDir": "frontend",
+  "server": {
+    "androidScheme": "http",
+    "allowNavigation": [
+      "http://*",
+      "https://*"
+    ]
+  }
+}
