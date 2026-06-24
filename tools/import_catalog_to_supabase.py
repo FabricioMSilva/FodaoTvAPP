@@ -45,7 +45,8 @@ def api_request(method: str, path: str, values: dict[str, str], **kwargs: Any) -
         timeout=45,
         **kwargs,
     )
-    response.raise_for_status()
+    if not response.ok:
+        raise RuntimeError(f'Supabase retornou {response.status_code} em {path}: {response.text}')
     return response
 
 
@@ -87,20 +88,24 @@ def main() -> None:
                 json=[{'category_id': category_id, 'name': group_name}],
             ).json()
             group_id = group_response[0]['id']
-            streams: list[dict[str, Any]] = []
+            streams_by_name: dict[str, dict[str, Any]] = {}
             for item in playlist:
                 if not isinstance(item, dict) or not item.get('url') or not item.get('name'):
                     continue
-                streams.append({
+                name = str(item['name']).strip()
+                # The catalogue can contain repeated names. The last entry wins,
+                # matching the effective playlist view while keeping the database key unique.
+                streams_by_name[name] = {
                     'category_id': category_id,
                     'group_id': group_id,
-                    'name': str(item['name']).strip(),
+                    'name': name,
                     'stream_url': str(item['url']).strip(),
                     'logo_url': str(item.get('logo', '') or '').strip() or None,
                     'stream_type': str(item.get('type', slug) or slug),
                     'is_active': True,
                     'metadata': item,
-                })
+                }
+            streams = list(streams_by_name.values())
             for batch in chunks(streams):
                 api_request('POST', 'streams?on_conflict=group_id,name', values, json=batch)
             imported += len(streams)
