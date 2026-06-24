@@ -43,6 +43,7 @@ let allChannels = [];
 let channelsByCategory = {};
 let currentUsername = '';
 let currentUser = null;
+let currentProfile = null;
 let currentCategory = '';
 let currentGroupPath = [];
 let groupTrees = {};
@@ -90,6 +91,13 @@ const mobileHomeGroups = document.getElementById('mobile-home-groups');
 const mobileHomeCards = document.getElementById('mobile-home-cards');
 const mobileHomeSearchInput = document.getElementById('mobile-home-search-input');
 const mobileHomeCardsTitle = document.getElementById('mobile-home-cards-title');
+const adminBtn = document.getElementById('admin-btn');
+const profileAdminBtn = document.getElementById('profile-admin-btn');
+const adminCatalogModal = document.getElementById('admin-catalog-modal');
+const adminM3uFile = document.getElementById('admin-m3u-file');
+const adminM3uSummary = document.getElementById('admin-m3u-summary');
+const adminImportBtn = document.getElementById('admin-import-btn');
+let pendingAdminCatalog = null;
 
 // ============================================
 // INITIALIZATION
@@ -112,11 +120,23 @@ async function initializePlayer() {
 
   currentUser = session.user;
   currentUsername = session.user.email || 'Usuário';
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role, is_active, expires_at, display_name')
+    .eq('id', session.user.id)
+    .single();
+  if (profileError || !profile?.is_active || (profile.expires_at && new Date(profile.expires_at) < new Date())) {
+    await supabase.auth.signOut();
+    window.location.href = 'index.html';
+    return;
+  }
+  currentProfile = profile;
   displayUsername.textContent = currentUsername.toUpperCase();
   if (profileUsername) profileUsername.textContent = currentUsername.toUpperCase();
 
   favorites = JSON.parse(localStorage.getItem('fodao-favorites') || '[]');
   setupEventListeners();
+  enableAdminInterface();
   activateMobileShell();
   showHomeScreen();
   loadPlaylist();
@@ -168,6 +188,12 @@ async function loadPlaylist() {
   } catch (error) {
     showMessage(`Erro ao carregar catálogo: ${error.message}`, 'error');
   }
+}
+
+function enableAdminInterface() {
+  if (currentProfile?.role !== 'admin') return;
+  if (adminBtn) adminBtn.style.display = '';
+  if (profileAdminBtn) profileAdminBtn.style.display = '';
 }
 
 async function loadGroups(category) {
@@ -1169,6 +1195,83 @@ function openCategory(category, bypassAdultCheck = false) {
   }
 }
 
+function classifyImportedCategory(groupName, channelName) {
+  const text = `${groupName} ${channelName}`.toLocaleLowerCase('pt-BR');
+  if (/(adult|adulto|\+18|hentai)/.test(text)) return 'adultos';
+  if (/(esporte|sport|futebol|nba|ufc|premier league|copa)/.test(text)) return 'esportes';
+  if (/(s[eé]rie|series|temporada|episode|epis[oó]dio)/.test(text)) return 'series';
+  if (/(filme|movie|cinema|netflix|amazon|disney)/.test(text)) return 'filmes';
+  return 'ao-vivo';
+}
+
+function parseM3uForImport(text) {
+  const groups = new Map();
+  const streams = new Map();
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
+  let pending = null;
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    if (line.startsWith('#EXTINF')) {
+      const commaIndex = line.lastIndexOf(',');
+      const metadata = commaIndex >= 0 ? line.slice(0, commaIndex) : line;
+      const name = (commaIndex >= 0 ? line.slice(commaIndex + 1) : '').trim() || 'Sem nome';
+      const attribute = key => metadata.match(new RegExp(`${key}="([^"]*)"`, 'i'))?.[1] || '';
+      pending = {
+        name,
+        group: attribute('group-title') || 'Outros',
+        logo: attribute('tvg-logo'),
+        tvgId: attribute('tvg-id'),
+      };
+      continue;
+    }
+    if (line.startsWith('#') || !pending) continue;
+    const categorySlug = classifyImportedCategory(pending.group, pending.name);
+    const groupName = pending.group.trim() || 'Outros';
+    const key = `${categorySlug}\u0000${groupName}`;
+    groups.set(key, { category_slug: categorySlug, name: groupName, sort_order: groups.size });
+    streams.set(`${key}\u0000${pending.name}`, {
+      category_slug: categorySlug,
+      group_name: groupName,
+      name: pending.name,
+      stream_url: line,
+      logo_url: pending.logo,
+      stream_type: categorySlug,
+      metadata: { tvg_id: pending.tvgId, source_group: groupName },
+    });
+    pending = null;
+  }
+  return { groups: [...groups.values()], streams: [...streams.values()] };
+}
+
+function openAdminCatalogModal() {
+  if (currentProfile?.role !== 'admin' || !adminCatalogModal) return;
+  adminCatalogModal.classList.add('show');
+  adminCatalogModal.setAttribute('aria-hidden', 'false');
+}
+
+async function importAdminCatalog() {
+  if (currentProfile?.role !== 'admin' || !pendingAdminCatalog) return;
+  adminImportBtn.disabled = true;
+  adminImportBtn.textContent = 'ATUALIZANDO...';
+  try {
+    const { data, error } = await supabase.rpc('replace_catalog', { catalog: pendingAdminCatalog });
+    if (error) throw error;
+    catalogGroups = {};
+    categoryRecords = {};
+    allChannels = [];
+    selectedGroupId = '';
+    await loadPlaylist();
+    adminM3uSummary.textContent = `Catálogo atualizado: ${data.streams} links em ${data.groups} grupos.`;
+    showMessage('Catálogo atualizado para todos os usuários.', 'success');
+  } catch (error) {
+    showMessage(`Não foi possível atualizar o catálogo: ${error.message}`, 'error');
+  } finally {
+    adminImportBtn.disabled = false;
+    adminImportBtn.textContent = 'ATUALIZAR CATÁLOGO';
+  }
+}
+
 // ============================================
 // MODALS
 // ============================================
@@ -1262,6 +1365,33 @@ function setupEventListeners() {
   if (mobileChannelModal) mobileChannelModal.addEventListener('click', event => {
     if (event.target === mobileChannelModal) closeMobileChannelModal();
   });
+  if (adminBtn) adminBtn.addEventListener('click', event => {
+    event.preventDefault();
+    openAdminCatalogModal();
+  });
+  if (profileAdminBtn) profileAdminBtn.addEventListener('click', () => {
+    closeModal('profile-modal');
+    openAdminCatalogModal();
+  });
+  if (adminM3uFile) adminM3uFile.addEventListener('change', async () => {
+    const file = adminM3uFile.files?.[0];
+    pendingAdminCatalog = null;
+    adminImportBtn.disabled = true;
+    if (!file) {
+      adminM3uSummary.textContent = 'Nenhum arquivo selecionado.';
+      return;
+    }
+    try {
+      const catalog = parseM3uForImport(await file.text());
+      if (!catalog.streams.length) throw new Error('Nenhum link M3U válido foi encontrado.');
+      pendingAdminCatalog = catalog;
+      adminM3uSummary.textContent = `${file.name}: ${catalog.streams.length} links em ${catalog.groups.length} grupos. O catálogo atual será substituído.`;
+      adminImportBtn.disabled = false;
+    } catch (error) {
+      adminM3uSummary.textContent = `Arquivo inválido: ${error.message}`;
+    }
+  });
+  if (adminImportBtn) adminImportBtn.addEventListener('click', importAdminCatalog);
   document.querySelectorAll('.logout').forEach(button => {
     button.addEventListener('click', async event => {
       event.preventDefault();

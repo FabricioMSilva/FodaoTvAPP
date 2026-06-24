@@ -47,6 +47,10 @@
       </nav>
 
       <div class="sidebar-footer">
+        <a href="#" class="nav-item" id="admin-btn" style="display:none">
+          <i class="fas fa-shield-alt"></i>
+          <span>ADMINISTRAÇÃO</span>
+        </a>
         <a href="#" class="nav-item" id="settings-btn">
           <i class="fas fa-cog"></i>
           <span>CONFIGURAÇÕES</span>
@@ -327,9 +331,32 @@
             </div>
           </div>
           <button class="btn-primary btn-renew">RENOVAR PLANO</button>
+          <button class="btn-primary btn-renew" id="profile-admin-btn" style="display:none">ADMINISTRAÇÃO</button>
         </div>
       </div>
     </div>
+  </div>
+
+  <div id="admin-catalog-modal" class="modal admin-catalog-modal" aria-hidden="true">
+    <section class="modal-content admin-catalog-content" role="dialog" aria-modal="true" aria-labelledby="admin-catalog-title">
+      <div class="modal-header">
+        <div>
+          <span class="eyebrow">ADMINISTRAÇÃO</span>
+          <h2 id="admin-catalog-title">Atualizar catálogo M3U</h2>
+        </div>
+        <button class="close-modal" data-modal="admin-catalog-modal" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="admin-catalog-copy">Escolha um arquivo M3U/M3U8. O catálogo atual será substituído para todos os usuários após a validação.</p>
+        <label class="admin-file-picker" for="admin-m3u-file">
+          <i class="fas fa-file-import"></i>
+          <span>Selecionar arquivo M3U</span>
+          <input id="admin-m3u-file" type="file" accept=".m3u,.m3u8,audio/x-mpegurl,application/x-mpegurl" hidden>
+        </label>
+        <p id="admin-m3u-summary" class="admin-m3u-summary">Nenhum arquivo selecionado.</p>
+        <button id="admin-import-btn" class="btn-primary btn-lg" type="button" disabled>ATUALIZAR CATÁLOGO</button>
+      </div>
+    </section>
   </div>
 
   <!-- Visual catalog for movie and series folders -->

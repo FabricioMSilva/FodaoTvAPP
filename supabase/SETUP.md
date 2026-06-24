@@ -42,6 +42,12 @@ python tools/import_catalog_to_supabase.py
 O comando usa a chave administrativa apenas no computador e envia os grupos e links de
 `output_extracao/` para o Supabase. Esse diretório continua ignorado pelo Git.
 
+## 6. Habilitar importação pelo painel administrador
+
+Execute também `migrations/20260624_000002_admin_catalog_import.sql` no SQL Editor.
+Ela cria a função transacional usada pelo painel administrativo para substituir o catálogo
+a partir de um arquivo M3U. Apenas perfis com `role = 'admin'` podem executá-la.
+
 ## Segurança
 
 - Nunca exponha a `SUPABASE_SERVICE_ROLE_KEY`.

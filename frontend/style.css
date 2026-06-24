@@ -2854,6 +2854,27 @@ body::after {
 .adult-cancel { border: 1px solid rgba(155, 180, 225, 0.24); background: transparent; color: #c5d1e7; }
 .adult-confirm { border: 0; background: linear-gradient(135deg, #e53e60, #a93467); color: #fff; }
 
+.admin-catalog-content { width: min(560px, 94vw); }
+.admin-catalog-copy { margin: 0 0 18px; color: var(--text-secondary); line-height: 1.5; }
+.admin-file-picker {
+  display: flex;
+  min-height: 120px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px dashed rgba(89, 214, 255, 0.55);
+  border-radius: 16px;
+  background: rgba(23, 72, 139, 0.16);
+  color: #dffaff;
+  cursor: pointer;
+  font-weight: 700;
+}
+.admin-file-picker i { color: var(--primary-cyan); font-size: 1.7rem; }
+.admin-file-picker:hover { background: rgba(35, 116, 202, 0.24); }
+.admin-m3u-summary { min-height: 38px; margin: 14px 0; color: var(--text-secondary); font-size: 0.82rem; line-height: 1.45; }
+.admin-catalog-content #admin-import-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+
 /* Android phone and TCL/Android TV ergonomics. */
 @media (min-width: 1280px) and (min-height: 700px) {
   .player-page .player-section { padding: 26px 42px 30px; gap: 26px; }
